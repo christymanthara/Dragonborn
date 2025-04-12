@@ -1,0 +1,1 @@
+to run a model in cpp and then use it with libtorch we need to convert it into the torchscript formmat. For that we will use the code given below. dont forget to activate the enviornment.
