@@ -1,4 +1,5 @@
 deployYolo
 .vscode
 object-detection-application/node_modules
+object_detection_api/creds.json
 object_detection_api/__pycache__

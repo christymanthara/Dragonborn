@@ -1,7 +1,8 @@
+import base64
 import cv2
 import numpy as np
 import os
-
+from google.cloud import aiplatform
 # Fix for Qt platform plugin error
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 from fastapi import FastAPI, UploadFile
@@ -30,6 +31,53 @@ model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu'))) 
 
 # Step 3: Set model to evaluation mode
 model.eval()
+
+
+
+
+# WEB
+from fastapi import FastAPI, UploadFile
+from fastapi.responses import JSONResponse
+# import tempfile  # Unused import
+import os
+# import shutil  # Unused import
+# from pydantic import BaseModel  # Unused import
+# import asyncio  # Unused import
+# from typing import Optional  # Unused import
+
+# Import Vertex AI libraries
+# from google.cloud import aiplatform  # Unused import
+import vertexai
+#from vertexai import agent_engines
+
+# from vertexai.preview.language_models import TextGenerationModel  # Unused import
+
+PROJECT_ID = "clever-axe-456700-a1"
+LOCATION = "us-central1"
+STAGING_BUCKET = "gs://dragonborn_404"
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "./creds.json"
+
+vertexai.init(
+    project=PROJECT_ID,
+    location=LOCATION,
+    staging_bucket=STAGING_BUCKET,
+)
+
+
+# Fetch your deployed agent
+# Define or import agent_engines before using it
+from google.cloud.aiplatform import MatchingEngineIndexEndpoint
+
+# Initialize agent_engines (example setup, adjust as needed)
+#agent_engines = MatchingEngineIndexEndpoint(index_endpoint_name="projects/552131670066/locations/us-central1/reasoningEngines/3995405353012428800")
+
+#agent_engine = vertexai.agent_engines.get('projects/552131670066/locations/us-central1/reasoningEngines/3995405353012428800')
+from vertexai import agent_engines
+
+agent_engine = agent_engines.get("projects/552131670066/locations/us-central1/reasoningEngines/3995405353012428800")
+
+
 
 print("✅ Model loaded successfully!")
 
@@ -105,111 +153,154 @@ async def read_root():
 @app.post("/detect/")
 async def detect_objects(file: UploadFile):
     # Process the uploaded image for object detection
-    image_bytes = await file.read()
-    image = np.frombuffer(image_bytes, dtype=np.uint8)
-    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-    
-    # Perform object detection with YOLOv8
-    #results = model.predict(image)
-    
-    # Extract relevant data from results (like bounding boxes, confidence scores, and class names)
-    #detections = []
-    #for result in results:
-    #    for box in result.boxes:
-    #        detections.append({
-    #            "class": model.names[box.cls[0].item()],  # class name
-    #            "confidence": box.conf[0].item(),         # confidence score
-    #            "bbox": box.xyxy[0].tolist()              # bounding box in [x1, y1, x2, y2] format
-    #        })
-    
-    #return JSONResponse(content={"detections": detections})
 
+    # Try the cloud
+    try:
+        image_bytes = await file.read()
+        image = np.frombuffer(image_bytes, dtype=np.uint8)
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
-    # RUN the model: 
-    #image_path = "cat.jpg"  # Replace with your test image
-    #image = Image.open(image_path).convert("RGB")  # Ensure 3-channel format
+        # Convert image to base64
+        encoded_image = base64.b64encode(image_bytes).decode("utf-8")
 
-    # Define preprocessing (same as used during training)
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),  # Resize to match model input
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+        # Create request payload
+        payload = {
+            "instances": [
+                {
+                    "image_bytes": {"b64": encoded_image},
+                    "key": file.filename
+                }
+            ]
+        }
 
-    # Apply transformations
-    image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    image = transform(image).unsqueeze(0)  # Add batch dimension
+        # Make call to Vertex AI endpoint (example shown below)
+        response = agent_engine.execute(payload)  # or however your interface is set up
 
-    # Perform inference
-    with torch.no_grad():
-        output = model(image)
-
-    # Convert output to class prediction
-    highest_confidence = torch.softmax(output, dim=1).max().item()
-    print(f"🌟 Confidence: {highest_confidence}")
-    """
-    if highest_confidence < 0.5:
-        print("❌ Confidence too low for prediction.")
+        # Parse response
         detections = []
         detections.append({
-            "class":"Please try again",
-            "confidence": 0,         # dummy
+            "class": response,
+            "confidence": 1,
+            "bbox": [0, 0, 1, 1],
+            "name": response,
+            "color": "beautiful",
+        })
+
+        return JSONResponse(content={"detections": detections, "segmentation": 0})
+
+    
+    except Exception as e:
+
+        image_bytes = await file.read()
+        image = np.frombuffer(image_bytes, dtype=np.uint8)
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+
+
+
+
+        
+        # Perform object detection with YOLOv8
+        #results = model.predict(image)
+        
+        # Extract relevant data from results (like bounding boxes, confidence scores, and class names)
+        #detections = []
+        #for result in results:
+        #    for box in result.boxes:
+        #        detections.append({
+        #            "class": model.names[box.cls[0].item()],  # class name
+        #            "confidence": box.conf[0].item(),         # confidence score
+        #            "bbox": box.xyxy[0].tolist()              # bounding box in [x1, y1, x2, y2] format
+        #        })
+        
+        #return JSONResponse(content={"detections": detections})
+
+
+        # RUN the model: 
+        #image_path = "cat.jpg"  # Replace with your test image
+        #image = Image.open(image_path).convert("RGB")  # Ensure 3-channel format
+
+        # Define preprocessing (same as used during training)
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),  # Resize to match model input
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+        # Apply transformations
+        image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        image = transform(image).unsqueeze(0)  # Add batch dimension
+
+        # Perform inference
+        with torch.no_grad():
+            output = model(image)
+
+        # Convert output to class prediction
+        highest_confidence = torch.softmax(output, dim=1).max().item()
+        print(f"🌟 Confidence: {highest_confidence}")
+        """
+        if highest_confidence < 0.5:
+            print("❌ Confidence too low for prediction.")
+            detections = []
+            detections.append({
+                "class":"Please try again",
+                "confidence": 0,         # dummy
+                "bbox": [0,0,1,1],       # dummy
+                "name": "Please try again",
+                "color": "",
+            })
+            return JSONResponse(content={"detections": detections, "segmentation": 0})
+        """
+
+        predicted_class = torch.argmax(output, dim=1).item()
+        print(f"✅ Predicted Flower Label: {predicted_class}, name: {class_to_flower[predicted_class]}")
+
+        """
+        # SEGMENTATION
+        # Load a pre-trained DeepLabV3 model for segmentation
+        # Load a pre-trained DeepLabV3 model for segmentation
+        segmentation_model = models.segmentation.deeplabv3_resnet50(pretrained=True)
+        segmentation_model.classifier[4] = torch.nn.Conv2d(256, num_classes, kernel_size=(1, 1), stride=(1, 1))
+        segmentation_model.eval()
+        print("✅ Segmentation model adapted for flowers and loaded successfully!")
+
+        # Perform segmentation
+        with torch.no_grad():
+            # Use the already transformed image
+            segmentation_output = segmentation_model(image)['out'][0]
+            segmentation_mask = segmentation_output.argmax(0).byte().cpu().numpy()
+        print("✅ Segmentation mask generated successfully!")
+
+        # Visualize the result
+        masked_image = visualize_result(
+            original_image=np.array(Image.open(file.file).convert("RGB")),  # Convert uploaded file to RGB
+            mask=segmentation_mask,
+            output_path="segmentation_result.png"  # Save the result to a file
+        )
+        print("✅ Visualization completed!")
+        """
+        """
+        # Convert masked_image from numpy array to PIL Image
+        print(masked_image.size)
+        image = Image.fromarray(cv2.cvtColor(masked_image, cv2.COLOR_RGBA2RGB))
+        image = transform(image).unsqueeze(0)
+        with torch.no_grad():
+            output = model(masked_image)
+
+        # Convert output to class prediction
+        highest_confidence = torch.softmax(output, dim=1).max().item()
+        print(f"🌟 Confidence: {highest_confidence}")
+        """
+        
+        detections = []
+        detections.append({
+            "class":class_to_flower[predicted_class],
+            "confidence": highest_confidence,         # dummy
             "bbox": [0,0,1,1],       # dummy
-            "name": "Please try again",
-            "color": "",
+            "name": class_to_flower[predicted_class],
+            "color": "beautiful",
         })
         return JSONResponse(content={"detections": detections, "segmentation": 0})
-    """
-
-    predicted_class = torch.argmax(output, dim=1).item()
-    print(f"✅ Predicted Flower Label: {predicted_class}, name: {class_to_flower[predicted_class]}")
-
-    """
-    # SEGMENTATION
-    # Load a pre-trained DeepLabV3 model for segmentation
-    # Load a pre-trained DeepLabV3 model for segmentation
-    segmentation_model = models.segmentation.deeplabv3_resnet50(pretrained=True)
-    segmentation_model.classifier[4] = torch.nn.Conv2d(256, num_classes, kernel_size=(1, 1), stride=(1, 1))
-    segmentation_model.eval()
-    print("✅ Segmentation model adapted for flowers and loaded successfully!")
-
-    # Perform segmentation
-    with torch.no_grad():
-        # Use the already transformed image
-        segmentation_output = segmentation_model(image)['out'][0]
-        segmentation_mask = segmentation_output.argmax(0).byte().cpu().numpy()
-    print("✅ Segmentation mask generated successfully!")
-
-    # Visualize the result
-    masked_image = visualize_result(
-        original_image=np.array(Image.open(file.file).convert("RGB")),  # Convert uploaded file to RGB
-        mask=segmentation_mask,
-        output_path="segmentation_result.png"  # Save the result to a file
-    )
-    print("✅ Visualization completed!")
-    """
-    """
-    # Convert masked_image from numpy array to PIL Image
-    print(masked_image.size)
-    image = Image.fromarray(cv2.cvtColor(masked_image, cv2.COLOR_RGBA2RGB))
-    image = transform(image).unsqueeze(0)
-    with torch.no_grad():
-        output = model(masked_image)
-
-    # Convert output to class prediction
-    highest_confidence = torch.softmax(output, dim=1).max().item()
-    print(f"🌟 Confidence: {highest_confidence}")
-    """
-    
-    detections = []
-    detections.append({
-        "class":class_to_flower[predicted_class],
-        "confidence": highest_confidence,         # dummy
-        "bbox": [0,0,1,1],       # dummy
-        "name": class_to_flower[predicted_class],
-        "color": "beautiful",
-    })
-    return JSONResponse(content={"detections": detections, "segmentation": 0})
 
 
 
@@ -218,4 +309,5 @@ async def describe_image(file: UploadFile):
     # Process the uploaded image for description
     input_data = await file.read()
     print("input: " + str(input_data))
-    return JSONResponse(content={"description": "Image description placeholder"})
+    output = "Image description placeholder"
+    return JSONResponse(content={"description": output})
