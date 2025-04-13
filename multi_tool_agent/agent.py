@@ -16,6 +16,19 @@ description_agent = LlmAgent(
     # tools=[google_search], # Provide an instance of the tool
 )
 
+def get_images():
+    # This function should return a list of images or image URLs.
+    # For the sake of this example, let's return an empty list.
+    return []
+
+image_recognizer_agent = LlmAgent(
+    model="gemini-2.0-flash-exp",
+    name="image_recognizer_agent",
+    description="A helpful assistant agent that can recognize images using the function get_images. It should tell which is the most prominent object in the image that we have . Make sure that the output follows the format of 'color' 'object_name'. Do not give anything more as the output. in case of a particular flower it should use the google search and give the answer as 'color' 'flower_name'. do not add anything more to the output.", ,
+    instruction="""Respond to the query using google search""",
+    # google_search is a pre-built tool which allows the agent to perform Google searches.
+    # tools=[google_search], # Provide an instance of the tool
+)
 
 greeting_agent = model=LlmAgent(model="gemini-2.0-flash-lite",
             name="greeting_agent",
