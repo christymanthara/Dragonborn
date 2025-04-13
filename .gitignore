@@ -1,3 +1,10 @@
 venvDragonborn
 multi_tool_agent/.env
 multi_tool_agent/__pycache__
+test/.env
+
+frontend
+backend
+test
+yolov8webapp
+gemini-image-id-backend/gemini-image-id-fastapi/.env
