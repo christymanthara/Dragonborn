@@ -21,6 +21,21 @@ public class UI : MonoBehaviour
     public RawImage previewImage;
     public GameObject previewImageObj;
 
+    [System.Serializable]
+    public class Detection
+    {
+        public string @class;
+        public float confidence;
+        public float[] bbox;
+    }
+
+    [System.Serializable]
+    public class DetectionResponse
+    {
+        public Detection[] detections;
+    }
+
+
     // Start is called before the first frame update
     void Start()
     {
@@ -78,20 +93,31 @@ public class UI : MonoBehaviour
         WWWForm form = new WWWForm();
         form.AddBinaryData("file", imageData, "capturedImage.jpg", "image/jpeg");
 
-        using (UnityWebRequest www = UnityWebRequest.Post("http://192.168.199.97:8000/detect", form))
+        using (UnityWebRequest www = UnityWebRequest.Post("http://192.168.199.97:8000/detect/", form))
         {
             yield return www.SendWebRequest();
 
             if (www.result == UnityWebRequest.Result.Success)
             {
                 UnityEngine.Debug.Log("Image successfully uploaded!");
+                string json = www.downloadHandler.text;
+                UnityEngine.Debug.Log("Server response: " + json);
+
+                DetectionResponse response = JsonUtility.FromJson<DetectionResponse>(json);
+
+                foreach (var detection in response.detections)
+                {
+                    Debug.Log($"Detected: {detection.@class} with confidence {detection.confidence}");
+                }
             }
             else
             {
                 UnityEngine.Debug.LogError("Image upload failed: " + www.error);
+                UnityEngine.Debug.LogError("Server response: " + www.downloadHandler.text);
             }
         }
     }
+
 
     void CaptureCameraImage()
     {
