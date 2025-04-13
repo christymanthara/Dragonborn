@@ -59,21 +59,24 @@ description_agent = LlmAgent(
     model="gemini-2.0-flash-exp", # Required: Specify the LLM 
     name="question_answer_agent", # Required: Unique agent name
     description="A helpful assistant agent that can answer questions. It should give more information to the children about the object they are intersted in. Make sure that you keep the responses short and simple. "
-                "You can also use the google_search tool to find more information about the object. ",
-    instruction="""Respond to the query using google search""",
+                "You can also use the function google_search  to find more information about the object. ",
+    instruction="""Respond to the query using google_search""",
     # google_search is a pre-built tool which allows the agent to perform Google searches.
     # tools=[google_search], # Provide an instance of the tool
 )
 
-
-
-
+image_fetch_agent = LlmAgent(
+    model="gemini-2.0-flash-exp",
+    name="image_fetch_agent",
+    description="A helpful assistant agent that can fetch images from the chat. it should be able to identify the main content of the image and give back the response as 'color object_name'.""You can also use the google_search tool to find more information about the object. ",
+    instruction="""Respond to the query using google search""",
+)
 
 image_recognizer_agent = LlmAgent(
     model="gemini-2.0-flash-exp",
     name="image_recognizer_agent",
     description="A helpful assistant agent that can recognize images using the function get_images. It should tell which is the most prominent object in the image that we have. Make sure that the output follows the format of 'color' 'object_name'. Do not give anything more as the output. if the function get_images returns an exception 'Error processing image:' then give the return as 'Retry capturing the image'. in case of a particular flower it should use the google search and give the answer as 'color' 'flower_name'. do not add anything more to the output.",
-    instruction="""Respond to the query using google search""",
+    instruction="""Respond to the query using get_images if not possible tell 'Retry capturing the image'""",
     # google_search is a pre-built tool which allows the agent to perform Google searches.
     # tools=[get_images],  # Now we're providing the tool function
 )
@@ -127,7 +130,8 @@ root_agent = Agent(
         farewell_agent,
         description_agent,
         model_task_agent,
-        image_recognizer_agent
+        image_recognizer_agent,
+        image_fetch_agent,
     ],
     tools=[agent_tool.AgentTool(agent=description_agent), agent_tool.AgentTool(agent=image_recognizer_agent)],
 
