@@ -9,6 +9,20 @@ from google.genai import types
 import PIL.Image
 import os
 from dotenv import load_dotenv
+import vertexai
+
+PROJECT_ID = ""
+LOCATION = ""
+STAGING_BUCKET = ""
+
+vertexai.init(
+    project=PROJECT_ID,
+    location=LOCATION,
+    staging_bucket=STAGING_BUCKET,
+)   
+
+
+
 
 
 def get_images(image_path):
@@ -135,6 +149,22 @@ root_agent = Agent(
     ],
     tools=[agent_tool.AgentTool(agent=description_agent), agent_tool.AgentTool(agent=image_recognizer_agent)],
 
+)
+
+from vertexai import agent_engines
+
+remote_app = agent_engines.create(
+    agent_engine=root_agent,
+    requirements=[
+        "google-cloud-aiplatform[adk,agent_engines]",
+    ]
+)
+
+from vertexai.preview import reasoning_engines
+
+app = reasoning_engines.AdkApp(
+    agent=root_agent,
+    enable_tracing=True,
 )
 
 
