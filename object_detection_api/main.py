@@ -147,7 +147,8 @@ async def detect_objects(file: UploadFile):
     # Convert output to class prediction
     highest_confidence = torch.softmax(output, dim=1).max().item()
     print(f"🌟 Confidence: {highest_confidence}")
-    if highest_confidence < 0.7:
+    """
+    if highest_confidence < 0.5:
         print("❌ Confidence too low for prediction.")
         detections = []
         detections.append({
@@ -158,6 +159,7 @@ async def detect_objects(file: UploadFile):
             "color": "",
         })
         return JSONResponse(content={"detections": detections, "segmentation": 0})
+    """
 
     predicted_class = torch.argmax(output, dim=1).item()
     print(f"✅ Predicted Flower Label: {predicted_class}, name: {class_to_flower[predicted_class]}")
@@ -186,7 +188,6 @@ async def detect_objects(file: UploadFile):
     )
     print("✅ Visualization completed!")
     """
-    
     """
     # Convert masked_image from numpy array to PIL Image
     print(masked_image.size)
