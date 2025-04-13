@@ -2,8 +2,8 @@ import datetime
 from zoneinfo import ZoneInfo
 from google.adk.agents import Agent
 from dotenv import load_dotenv
-from google.adk.tools import google_Search
-from google.adk.agents import LlmAgent 
+from google.adk.tools import google_search
+from google.adk.agents import LlmAgent, BaseAgent
 
 import os
 
@@ -58,14 +58,48 @@ def get_current_time(city: str) -> dict:
     )
     return {"status": "success", "report": report}
 
-dice_agent = LlmAgent(
+description_agent = LlmAgent(
     model="gemini-2.0-flash-exp", # Required: Specify the LLM 
     name="question_answer_agent", # Requdired: Unique agent name
-    description="A helpful assistant agent that can answer questions.",
+    description="A helpful assistant agent that can answer questions. It should give more information to the children about the object they are intersted in. Make sure that you keep the responses short and simple. "
+                "You can also use the google search tool to find more information about the object. ",
     instruction="""Respond to the query using google search""",
     tools=[google_search], # Provide an instance of the tool
 )
 
+
+greeting_agent = Agent(
+         model=LlmAgent(model="anthropic/claude-3-sonnet-20240229"),
+            name="greeting_agent",
+            instruction="You are the Greeting Agent. Your ONLY task is to provide a friendly greeting to the user. Make it short and appealing for children less than 8 years old. " "Do not engage in any other conversation or tasks.",
+            # Crucial for delegation: Clear description of capability
+            description="Handles simple greetings and hellos",
+            
+ )
+
+farewell_agent = Agent(
+          model=LlmAgent(model="anthropic/claude-3-sonnet-20240229"),
+            name="farewell_agent",
+            instruction="You are the Farewell Agent. Your ONLY task is to provide a polite goodbye message. Make it short and appealing for children less than 8 years old "
+                        "Do not perform any other actions.",
+            # Crucial for delegation: Clear description of capability
+            description="Handles simple farewells and goodbyes",
+            
+ )
+
+model_task_agent = BaseAgent(name="TaskExecutor") 
+
+coordinator_agent = LlmAgent(
+    name="Coordinator",
+    model="gemini-2.0-flash-exp",
+    description="coordinate the entire working of the system. Remember that you are dealing with children less than 8 years old. So be polite and friendly.",
+    sub_agents=[ # Assign sub_agents here
+        greeting_agent,
+        farewell_agent,
+        description_agent,
+        model_task_agent,
+    ]
+)
 
 root_agent = Agent(
     name="weather_time_agent",
