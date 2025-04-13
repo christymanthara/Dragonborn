@@ -13,7 +13,7 @@ description_agent = LlmAgent(
                 "You can also use the google_search tool to find more information about the object. ",
     instruction="""Respond to the query using google search""",
     # google_search is a pre-built tool which allows the agent to perform Google searches.
-    tools=[google_search], # Provide an instance of the tool
+    # tools=[google_search], # Provide an instance of the tool
 )
 
 
