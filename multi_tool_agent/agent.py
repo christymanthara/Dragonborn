@@ -2,6 +2,9 @@ import datetime
 from zoneinfo import ZoneInfo
 from google.adk.agents import Agent
 from dotenv import load_dotenv
+from google.adk.tools import google_Search
+from google.adk.agents import LlmAgent 
+
 import os
 
 def get_weather(city: str) -> dict:
@@ -55,39 +58,14 @@ def get_current_time(city: str) -> dict:
     )
     return {"status": "success", "report": report}
 
-import requests
-import json
+dice_agent = LlmAgent(
+    model="gemini-2.0-flash-exp", # Required: Specify the LLM 
+    name="question_answer_agent", # Requdired: Unique agent name
+    description="A helpful assistant agent that can answer questions.",
+    instruction="""Respond to the query using google search""",
+    tools=[google_search], # Provide an instance of the tool
+)
 
-def get_flower_info(flower_name:str) -> dict:
-    """
-    Get detailed information about a flower using Plant.id API
-    
-    Args:
-        flower_name: The name of the flower identified by YOLOv8
-        
-    Returns:
-        Dictionary with detailed information about the flower
-    """
-    # Replace with your Plant.id API key
-
-    flower_id = os.getenv("plant_id_key")
-    flower_api_key = flower_id
-    
-    # API endpoint for plant details
-    url = f"https://plant.id/api/v2/species-info?key={flower_api_key}"
-    
-    # Prepare the request data
-    data = {
-        "name": flower_name
-    }
-    
-    # Make the API request
-    response = requests.post(url, json=data)
-    
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return {"error": f"Failed to get information: {response.status_code}"}
 
 root_agent = Agent(
     name="weather_time_agent",
@@ -98,7 +76,7 @@ root_agent = Agent(
     instruction=(
         "I can answer your questions about the time and weather in a city. Also more information about flowers using Plant.id API. "
     ),
-    tools=[get_weather, get_current_time, get_flower_info],
+    tools=[get_weather, get_current_time],
 
 )
 
