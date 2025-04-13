@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from google.adk.tools import google_search
 from google.adk.agents import LlmAgent, BaseAgent
 
-import os
+
 
 def get_weather(city: str) -> dict:
     """Retrieves the current weather report for a specified city.
@@ -68,8 +68,7 @@ description_agent = LlmAgent(
 )
 
 
-greeting_agent = Agent(
-         model=LlmAgent(model="anthropic/claude-3-sonnet-20240229"),
+greeting_agent = model=LlmAgent(model="gemini-2.0-flash-lite",
             name="greeting_agent",
             instruction="You are the Greeting Agent. Your ONLY task is to provide a friendly greeting to the user. Make it short and appealing for children less than 8 years old. " "Do not engage in any other conversation or tasks.",
             # Crucial for delegation: Clear description of capability
@@ -77,8 +76,7 @@ greeting_agent = Agent(
             
  )
 
-farewell_agent = Agent(
-          model=LlmAgent(model="anthropic/claude-3-sonnet-20240229"),
+farewell_agent = model=LlmAgent(model="gemini-2.0-flash-lite",
             name="farewell_agent",
             instruction="You are the Farewell Agent. Your ONLY task is to provide a polite goodbye message. Make it short and appealing for children less than 8 years old "
                         "Do not perform any other actions.",
@@ -89,17 +87,19 @@ farewell_agent = Agent(
 
 model_task_agent = BaseAgent(name="TaskExecutor") 
 
-coordinator_agent = LlmAgent(
-    name="Coordinator",
-    model="gemini-2.0-flash-exp",
-    description="coordinate the entire working of the system. Remember that you are dealing with children less than 8 years old. So be polite and friendly.",
-    sub_agents=[ # Assign sub_agents here
-        greeting_agent,
-        farewell_agent,
-        description_agent,
-        model_task_agent,
-    ]
-)
+# coordinator_agent = Agent(
+#     name="Coordinator",
+#     model="gemini-2.0-flash-exp",
+#     description=(
+#         "Agent to   coordinate the entire working of the system. Remember that you are dealing with children less than 8 years old. So be polite and friendly."
+#         ),
+#     sub_agents=[ # Assign sub_agents here
+#         greeting_agent,
+#         farewell_agent,
+#         description_agent,
+#         model_task_agent,
+#     ]
+# )
 
 root_agent = Agent(
     name="weather_time_agent",
@@ -111,6 +111,12 @@ root_agent = Agent(
         "I can answer your questions about the time and weather in a city. Also more information about flowers using Plant.id API. "
     ),
     tools=[get_weather, get_current_time],
+    sub_agents=[ # Assign sub_agents here
+        greeting_agent,
+        farewell_agent,
+        description_agent,
+        model_task_agent,
+    ],
 
 )
 
