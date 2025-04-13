@@ -1,21 +1,16 @@
 # the enviornment name is deployYolo.
 # it was created with
-python -m venv myenv
+python -m venv deployYolo
 
 # Activate the virtual environment (Windows)
-cd .\fastapi+yolo\
 deployYolo\Scripts\activate
 
 # Activate the virtual environment (macOS/Linux)
 source deployYolo/bin/activate
 
 # time to install the necessary dependencies. These include FastAPI, Uvicorn (for serving FastAPI apps), YOLO-related libraries, and any additional packages you may need for your project.
-pip install fastapi uvicorn opencv-python-headless numpy
+pip install -r requirements.txt
 
-
-# To work with YOLO, you’ll need to install the yolov8 library from ultralytics.
-
-pip install ultralytics
 
 # remember to run the scriots in object_detection_api
 cd object_detection_api
