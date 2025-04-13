@@ -162,7 +162,7 @@ async def detect_objects(file: UploadFile):
     predicted_class = torch.argmax(output, dim=1).item()
     print(f"✅ Predicted Flower Label: {predicted_class}, name: {class_to_flower[predicted_class]}")
 
-
+    """
     # SEGMENTATION
     # Load a pre-trained DeepLabV3 model for segmentation
     # Load a pre-trained DeepLabV3 model for segmentation
@@ -185,8 +185,9 @@ async def detect_objects(file: UploadFile):
         output_path="segmentation_result.png"  # Save the result to a file
     )
     print("✅ Visualization completed!")
-
-
+    """
+    
+    """
     # Convert masked_image from numpy array to PIL Image
     print(masked_image.size)
     image = Image.fromarray(cv2.cvtColor(masked_image, cv2.COLOR_RGBA2RGB))
@@ -197,6 +198,7 @@ async def detect_objects(file: UploadFile):
     # Convert output to class prediction
     highest_confidence = torch.softmax(output, dim=1).max().item()
     print(f"🌟 Confidence: {highest_confidence}")
+    """
     
     detections = []
     detections.append({
