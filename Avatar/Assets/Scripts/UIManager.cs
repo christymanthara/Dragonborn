@@ -1,12 +1,10 @@
 ﻿using System.Collections;
-using System.Diagnostics;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 using UnityEngine.Networking;
-using System.IO;
 
 
 public class UI : MonoBehaviour
@@ -78,9 +76,9 @@ public class UI : MonoBehaviour
         UnityEngine.Debug.Log("Sending image to server...");
 
         WWWForm form = new WWWForm();
-        form.AddBinaryData("image", imageData, "capturedImage.jpg", "image/jpeg");
+        form.AddBinaryData("file", imageData, "capturedImage.jpg", "image/jpeg");
 
-        using (UnityWebRequest www = UnityWebRequest.Post("http://192.168.95.64:3000/upload", form))
+        using (UnityWebRequest www = UnityWebRequest.Post("http://192.168.199.97:8000/detect", form))
         {
             yield return www.SendWebRequest();
 
@@ -94,30 +92,6 @@ public class UI : MonoBehaviour
             }
         }
     }
-
-    IEnumerator SendTextMessage()
-    {
-        UnityEngine.Debug.Log("Sending test message to server...");
-
-        WWWForm form = new WWWForm();
-        form.AddField("message", "This message comes from Unity");
-
-        using (UnityWebRequest www = UnityWebRequest.Post("http://192.168.199.97:3000/detect", form))
-        {
-            yield return www.SendWebRequest();
-
-            if (www.result == UnityWebRequest.Result.Success)
-            {
-                UnityEngine.Debug.Log("Message sent successfully!");
-                UnityEngine.Debug.Log("Server response: " + www.downloadHandler.text);
-            }
-            else
-            {
-                UnityEngine.Debug.LogError("###############################################################################Message send failed: " + www.error);
-            }
-        }
-    }
-
 
     void CaptureCameraImage()
     {
@@ -158,8 +132,7 @@ public class UI : MonoBehaviour
             byte[] imageBytes = texture.EncodeToJPG(); // You can use EncodeToPNG() if you prefer PNG
 
             // Send image to the Node.js server
-            // StartCoroutine(SendImageToServer(imageBytes));
-            StartCoroutine(SendTextMessage());
+            StartCoroutine(SendImageToServer(imageBytes));
         }
         else
         {
