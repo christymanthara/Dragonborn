@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Diagnostics;
 using Unity.Collections;
 using UnityEngine;
@@ -72,22 +72,53 @@ public class UI : MonoBehaviour
         CaptureCameraImage();
         previewImageObj.SetActive(true);
     }
-    
-    // Save byte array to a file for testing purposes
-    void SaveImageToFile(byte[] imageBytes)
-    {
-        string filePath = Path.Combine("/storage/emulated/0/Pictures", "capturedImage.jpg");
 
-        try
+    IEnumerator SendImageToServer(byte[] imageData)
+    {
+        UnityEngine.Debug.Log("Sending image to server...");
+
+        WWWForm form = new WWWForm();
+        form.AddBinaryData("image", imageData, "capturedImage.jpg", "image/jpeg");
+
+        using (UnityWebRequest www = UnityWebRequest.Post("http://192.168.95.64:3000/upload", form))
         {
-            File.WriteAllBytes(filePath, imageBytes);
-            UnityEngine.Debug.Log($"Image saved to: {filePath}");
-        }
-        catch (System.Exception e)
-        {
-            UnityEngine.Debug.LogError($"Failed to save image: {e.Message}");
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                UnityEngine.Debug.Log("Image successfully uploaded!");
+            }
+            else
+            {
+                UnityEngine.Debug.LogError("Image upload failed: " + www.error);
+            }
         }
     }
+
+    IEnumerator SendTextMessage()
+    {
+        UnityEngine.Debug.Log("Sending test message to server...");
+
+        WWWForm form = new WWWForm();
+        form.AddField("message", "This message comes from Unity");
+
+        using (UnityWebRequest www = UnityWebRequest.Post("http://192.168.199.97:3000/detect", form))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                UnityEngine.Debug.Log("Message sent successfully!");
+                UnityEngine.Debug.Log("Server response: " + www.downloadHandler.text);
+            }
+            else
+            {
+                UnityEngine.Debug.LogError("###############################################################################Message send failed: " + www.error);
+            }
+        }
+    }
+
+
     void CaptureCameraImage()
     {
         if (cameraManager != null && cameraManager.TryAcquireLatestCpuImage(out XRCpuImage image))
@@ -126,8 +157,9 @@ public class UI : MonoBehaviour
             // Convert Texture2D to byte array (JPEG or PNG)
             byte[] imageBytes = texture.EncodeToJPG(); // You can use EncodeToPNG() if you prefer PNG
 
-            // Save the image to a file
-            SaveImageToFile(imageBytes);
+            // Send image to the Node.js server
+            // StartCoroutine(SendImageToServer(imageBytes));
+            StartCoroutine(SendTextMessage());
         }
         else
         {
