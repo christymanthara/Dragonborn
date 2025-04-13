@@ -11,19 +11,6 @@ import os
 from dotenv import load_dotenv
 
 
-
-description_agent = LlmAgent(
-    model="gemini-2.0-flash-exp", # Required: Specify the LLM 
-    name="question_answer_agent", # Required: Unique agent name
-    description="A helpful assistant agent that can answer questions. It should give more information to the children about the object they are intersted in. Make sure that you keep the responses short and simple. "
-                "You can also use the google_search tool to find more information about the object. ",
-    instruction="""Respond to the query using google search""",
-    # google_search is a pre-built tool which allows the agent to perform Google searches.
-    # tools=[google_search], # Provide an instance of the tool
-)
-
-
-
 def get_images(image_path):
     """
     A tool function that analyzes an image using Gemini and returns a description.
@@ -56,17 +43,30 @@ def get_images(image_path):
     except Exception as e:
         return f"Error processing image: {str(e)}"
 
-def prompt_recapture_image(image_path):
-    """
-    A tool function that prompts the user to recapture an image.
+# def prompt_recapture_image(image_path):
+#     """
+#     A tool function that prompts the user to recapture an image.
     
-    Args:
-        image_path (str): Path to the image file to analyze
+#     Args:
+#         image_path (str): Path to the image file to analyze
         
-    Returns:
-        str: Prompt for the user to recapture the image
-    """
-    return f"Please recapture the image at {image_path}."
+#     Returns:
+#         str: Prompt for the user to recapture the image
+#     """
+#     return f"Please recapture the image at {image_path}."
+
+description_agent = LlmAgent(
+    model="gemini-2.0-flash-exp", # Required: Specify the LLM 
+    name="question_answer_agent", # Required: Unique agent name
+    description="A helpful assistant agent that can answer questions. It should give more information to the children about the object they are intersted in. Make sure that you keep the responses short and simple. "
+                "You can also use the google_search tool to find more information about the object. ",
+    instruction="""Respond to the query using google search""",
+    # google_search is a pre-built tool which allows the agent to perform Google searches.
+    # tools=[google_search], # Provide an instance of the tool
+)
+
+
+
 
 
 image_recognizer_agent = LlmAgent(
@@ -127,6 +127,7 @@ root_agent = Agent(
         farewell_agent,
         description_agent,
         model_task_agent,
+        image_recognizer_agent
     ],
     tools=[agent_tool.AgentTool(agent=description_agent), agent_tool.AgentTool(agent=image_recognizer_agent)],
 
