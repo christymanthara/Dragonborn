@@ -49,7 +49,7 @@ def visualize_result(original_image, mask, output_path=None):
         for y in range(resized_mask.shape[1]):
             if resized_mask[x, y] == resized_mask[0, 0]:  # Assuming the first class is the background
                 masked_image[x, y, 3] = 0  # Set alpha channel to 0 for transparency
-    # masked_image = Image.fromarray(masked_image)  # Convert back to PIL Image
+    #masked_image = Image.fromarray(masked_image)  # Convert back to PIL Image
 
 
     # Create a figure
