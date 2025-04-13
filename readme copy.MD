@@ -16,7 +16,7 @@ pip install -r requirements.txt
 cd object_detection_api
 
 # run the main.py by using
-uvicorn main:app --reload
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # paste the following url in postman and use the get request
 http://127.0.0.1:8000
