@@ -6,7 +6,7 @@ import os
 import base64
 
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY_2")
 
 app = FastAPI()
 
