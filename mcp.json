@@ -1,0 +1,13 @@
+{
+    "mcpServers": {
+      "duckduckgo-web-search": {
+        "type": "stdio",
+        "command": "npx",
+        "args": [
+          "-y",
+          "github:mmkal/duck-duck-scrape-mcp"
+        ]
+      }
+    }
+  }
+  
