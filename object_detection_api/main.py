@@ -26,7 +26,7 @@ model = models.resnet50(pretrained=False)
 model.fc = torch.nn.Linear(in_features=2048, out_features=102)  # Ensure output matches 102 classes
 
 # Step 2: Load the fine-tuned model weights
-model_path = "fine_tuned_resnet50.pth"  # Ensure the file is in the correct directory
+model_path = "object_detection_api/fine_tuned_resnet50.pth"  # Ensure the file is in the correct directory
 model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu'))) #, map_location=torch.device("cpu")))
 
 # Step 3: Set model to evaluation mode
@@ -56,7 +56,7 @@ PROJECT_ID = "clever-axe-456700-a1"
 LOCATION = "us-central1"
 STAGING_BUCKET = "gs://dragonborn_404"
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "./creds.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "object_detection_api\creds.json"
 
 vertexai.init(
     project=PROJECT_ID,
@@ -152,51 +152,173 @@ async def read_root():
 
 @app.post("/detect/")
 async def detect_objects(file: UploadFile):
-    # Process the uploaded image for object detection
+    # Read image bytes once at the beginning
+    image_bytes = await file.read()
+    image = np.frombuffer(image_bytes, dtype=np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+    
+    # Try the cloud model first
+    # try:
+    #     print("Attempting to use cloud model...")
+        
+    #     # Convert image to base64
+    #     encoded_image = base64.b64encode(image_bytes).decode("utf-8")
+        
+    #     # Create request payload
+    #     payload = {
+    #         "instances": [
+    #             {
+    #                 "image_bytes": {"b64": encoded_image},
+    #                 "key": file.filename
+    #             }
+    #         ]
+    #     }
+        
+    #     # Make call to Vertex AI endpoint
+    #     # response = agent_engine.execute(payload)
+    #     # response = agent_engine.run(payload)
 
-    # Try the cloud
-    try:
+    #     session = agent_engine.create_session()
+    #     response = session.predict(payload)
+    #     print(f"Cloud model response received: {response}")
+
+
+
+    # Try the cloud model first
+    # 
+    
+    
+    @app.post("/detect/")
+    async def detect_objects(file: UploadFile):
+    # Read image bytes
         image_bytes = await file.read()
         image = np.frombuffer(image_bytes, dtype=np.uint8)
         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-
+        
+    # Try the cloud model first
+    try:
+        print("Attempting to use cloud model...")
+        
         # Convert image to base64
         encoded_image = base64.b64encode(image_bytes).decode("utf-8")
+        
 
-        # Create request payload
-        payload = {
-            "instances": [
-                {
+        #-----------------------------
+        # Create a session with required user_id
+        session = agent_engine.create_session(user_id="test_user_id")
+        
+        # Print session to see its structure
+        print(f"Session object type: {type(session)}")
+        print(f"Session content: {session}")
+
+
+        agent_engine.list_sessions(user_id="test_user_id")
+        agent_engine.get_session(user_id="test_user_id", session_id=session["id"])
+
+        for event in agent_engine.stream_query(
+            user_id="test_user_id",
+            session_id=session["id"],
+            message={
                     "image_bytes": {"b64": encoded_image},
                     "key": file.filename
                 }
-            ]
-        }
+        ):
+            print(event)
 
-        # Make call to Vertex AI endpoint (example shown below)
-        response = agent_engine.execute(payload)  # or however your interface is set up
 
-        # Parse response
-        detections = []
-        detections.append({
-            "class": response,
+        
+        
+        # If session is a dictionary, try to extract the session object
+        if isinstance(session, dict):
+            # Try different approaches based on likely dictionary structure
+            if 'session' in session:
+                session_obj = session['session']
+                response = session_obj.predict({
+                    "image_bytes": {"b64": encoded_image},
+                    "key": file.filename
+                })
+            else:
+                # Try direct execution with the session ID if there is one
+                session_name = session.get('name', '')
+                print(f"Using session name: {session_name}")
+                response = agent_engine.execute_stream(
+                    session=session_name,
+                    request={"image": encoded_image}
+                )
+        else:
+            # If it's not a dictionary, try the previous approach
+            response = session.predict({
+                "image_bytes": {"b64": encoded_image},
+                "key": file.filename
+            })
+        
+        print(f"Cloud model response received: {response}")
+        
+        # Parse the response - adjust based on actual structure
+        flower_name = str(response)
+        
+        detections = [{
+            "class": flower_name,
             "confidence": 1,
             "bbox": [0, 0, 1, 1],
-            "name": response,
+            "name": flower_name,
             "color": "beautiful",
-        })
-
+        }]
+        
+        print("Successfully used cloud model")
         return JSONResponse(content={"detections": detections, "segmentation": 0})
-
     
+    # except Exception as e:
+    #     print(f"Cloud model failed with error: {str(e)}. Using local model instead.")
+        
+    #     # Local model processing code here (keep your existing implementation)
+    #     # ...
     except Exception as e:
-
-        image_bytes = await file.read()
-        image = np.frombuffer(image_bytes, dtype=np.uint8)
-        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-
-
-
+        print(f"Cloud model failed with error: {str(e)}. Using local model instead.")
+        
+        # Use local model as fallback
+        try:
+            # Convert to RGB for PyTorch model
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image_pil = Image.fromarray(image_rgb)
+            
+            # Define preprocessing (same as used during training)
+            transform = transforms.Compose([
+                transforms.Resize((224, 224)),  # Resize to match model input
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+            
+            # Apply transformations
+            image_tensor = transform(image_pil).unsqueeze(0)  # Add batch dimension
+            
+            # Perform inference
+            with torch.no_grad():
+                output = model(image_tensor)
+            
+            # Convert output to class prediction
+            probabilities = torch.softmax(output, dim=1)
+            highest_confidence = probabilities.max().item()
+            predicted_class = torch.argmax(output, dim=1).item()
+            
+            print(f"Local model prediction: {class_to_flower[predicted_class]} with confidence {highest_confidence:.4f}")
+            
+            detections = [{
+                "class": class_to_flower[predicted_class],
+                "confidence": highest_confidence,
+                "bbox": [0, 0, 1, 1],  # Placeholder bounding box
+                "name": class_to_flower[predicted_class],
+                "color": "beautiful",
+            }]
+            
+            return JSONResponse(content={"detections": detections, "segmentation": 0})
+            
+        except Exception as local_error:
+            print(f"Local model also failed with error: {str(local_error)}")
+            return JSONResponse(
+                content={"error": "Both cloud and local models failed to process the image"},
+                status_code=500
+            )
 
 
         
@@ -311,3 +433,8 @@ async def describe_image(file: UploadFile):
     print("input: " + str(input_data))
     output = "Image description placeholder"
     return JSONResponse(content={"description": output})
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
