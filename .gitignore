@@ -11,4 +11,12 @@ gemini-image-id-backend/gemini-image-id-fastapi/.envvenvDragonborn
 deployYolo
 .vscode
 object-detection-application/node_modules
+object_detection_api/creds.json
 object_detection_api/__pycache__
+
+
+object-detection-application/node_modules
+object
+
+venvDragonborn
+venvDragonborn2
